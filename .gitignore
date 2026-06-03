@@ -1,0 +1,11 @@
+# Log files
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# Claude internal
+.claude/
