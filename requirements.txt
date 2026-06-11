@@ -1,0 +1,2 @@
+# pomodoro.py uses only Python stdlib — no third-party packages required.
+# Python 3.11+, Windows only (tkinter + winsound).

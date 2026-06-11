@@ -473,6 +473,7 @@ class PomodoroApp:
             self.tasks.append({'text': text, 'done': False})
             self._refresh_lb()
             self._entry.delete(0, 'end')
+            self._save_tasks_to_log()
 
     def _toggle_done(self):
         sel = self._lb.curselection()
@@ -481,16 +482,19 @@ class PomodoroApp:
             self.tasks[idx]['done'] = not self.tasks[idx]['done']
             self._refresh_lb()
             self._lb.selection_set(idx)
+            self._save_tasks_to_log()
 
     def _delete_task(self):
         sel = self._lb.curselection()
         if sel:
             del self.tasks[sel[0]]
             self._refresh_lb()
+            self._save_tasks_to_log()
 
     def _clear_done(self):
         self.tasks = [t for t in self.tasks if not t['done']]
         self._refresh_lb()
+        self._save_tasks_to_log()
 
     # ── Daily log ─────────────────────────────────────────────────────────────
 
@@ -502,27 +506,67 @@ class PomodoroApp:
         label = MODE_LABEL[mode].ljust(12)
         line  = f'{ts}  {label}  {duration_min} min'
         try:
-            with open(self._log_path(), 'a', encoding='utf-8') as f:
-                if f.tell() == 0:
+            # Read existing content up to (but not including) the Tasks section,
+            # append the session line, then rewrite the Tasks section at the end.
+            p = self._log_path()
+            existing = ''
+            if p.exists():
+                text = p.read_text(encoding='utf-8')
+                idx = text.find('\n# Tasks')
+                existing = text[:idx] if idx != -1 else text
+            with open(p, 'w', encoding='utf-8') as f:
+                if not existing:
                     f.write(f'# {datetime.date.today()}\n')
+                else:
+                    f.write(existing)
                 f.write(line + '\n')
         except OSError:
             pass
         self._append_log(line, mode)
+        self._save_tasks_to_log()
+
+    def _save_tasks_to_log(self):
+        if not self.tasks:
+            return
+        p = self._log_path()
+        try:
+            existing = ''
+            if p.exists():
+                text = p.read_text(encoding='utf-8')
+                idx  = text.find('\n# Tasks')
+                existing = text[:idx] if idx != -1 else text
+            lines = ['\n# Tasks']
+            for t in self.tasks:
+                lines.append(('✓' if t['done'] else '○') + '  ' + t['text'])
+            with open(p, 'w', encoding='utf-8') as f:
+                if not existing:
+                    f.write(f'# {datetime.date.today()}\n')
+                else:
+                    f.write(existing)
+                f.write('\n'.join(lines) + '\n')
+        except OSError:
+            pass
 
     def _load_log(self):
         p = self._log_path()
         if not p.exists():
             return
         inv = {v: k for k, v in MODE_LABEL.items()}
+        in_tasks = False
         try:
             for raw in p.read_text(encoding='utf-8').splitlines():
-                if raw.startswith('#'):
+                if raw == '# Tasks':
+                    in_tasks = True
                     continue
-                mode = next((m for lbl, m in inv.items() if lbl in raw), None)
-                self._append_log(raw, mode)
+                if in_tasks:
+                    if raw and raw[0] in ('✓', '○'):
+                        self.tasks.append({'text': raw[3:], 'done': raw[0] == '✓'})
+                elif not raw.startswith('#'):
+                    mode = next((m for lbl, m in inv.items() if lbl in raw), None)
+                    self._append_log(raw, mode)
         except OSError:
             pass
+        self._refresh_lb()
 
     def _append_log(self, line, mode=None):
         self._log_text.config(state='normal')
