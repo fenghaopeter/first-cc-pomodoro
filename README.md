@@ -41,6 +41,7 @@ The Pomodoro Technique is a time-management method: work in focused 25-minute sp
 │  Work (min)      [ 25 ]     │                          │
 │  Short break     [  5 ]     │                          │
 │  Long break      [ 15 ]     │                          │
+│  NOTIFY  ☑ Sound  ☑ Pop-up  │                          │
 │  [ Apply ]                  │                          │
 └─────────────────────────────┴──────────────────────────┘
 ```
@@ -95,6 +96,17 @@ Change the duration for any mode:
 
 > Settings affect the *current* mode immediately. Other modes update the next time you switch to them.
 
+**Notification toggles**
+
+The **NOTIFY** row has two independent checkboxes — both are on by default:
+
+| Checkbox | Effect when checked |
+|---|---|
+| **Sound** | Plays a three-tone chime on session end; a **Stop Alarm** button appears to silence it |
+| **Pop-up** | Opens a small themed window showing which session just completed and a **Dismiss** button |
+
+You can enable either, both, or neither.
+
 ---
 
 ## Task List
@@ -117,6 +129,10 @@ Click a task in the list to select it, then use the buttons above.
 
 - Incomplete tasks show a **○** prefix.
 - Completed tasks show a **✓** prefix and appear dimmed.
+
+### Task Persistence
+
+Tasks are **automatically saved** to today's log file whenever you add, complete, delete, or clear them. When you reopen the app on the same day, all tasks (including their done/undone state) are restored exactly as you left them.
 
 ---
 
@@ -153,20 +169,26 @@ A new file is created each calendar day. You can open it with any text editor (N
 10:30:45  FOCUS         25 min
 10:35:50  SHORT BREAK    5 min
 11:01:02  FOCUS         25 min
-11:06:15  SHORT BREAK    5 min
-11:11:30  FOCUS         25 min
-11:36:45  SHORT BREAK    5 min
-12:01:58  FOCUS         25 min
 12:27:10  LONG BREAK    15 min
+
+# Tasks
+✓  Morning standup
+✓  Write report
+○  Review PR
+○  Update README
 ```
 
-**Column layout:**
+**Session entry columns:**
 
 | Column | Example | Meaning |
 |---|---|---|
 | Time | `10:30:45` | When the session completed (HH:MM:SS) |
 | Mode | `FOCUS` | Which type of session |
 | Duration | `25 min` | How long the session was set for |
+
+**Tasks section:**
+
+The `# Tasks` block at the end of the file is rewritten every time you add, complete, or delete a task. Each line is prefixed with `✓` (done) or `○` (incomplete). This section is also what the app reads back when you reopen it on the same day.
 
 ### Reviewing past days
 
@@ -192,15 +214,27 @@ After any break completes, the app switches back to Focus and waits for you to c
 
 ---
 
-## Sound Notification
+## Notifications
 
-A three-tone chime plays when a session reaches zero:
+When a session reaches zero, any enabled notification fires:
+
+### Sound
+
+A three-tone chime plays:
 
 ```
 880 Hz (short) → 660 Hz (short) → 880 Hz (long)
 ```
 
-This uses Windows' built-in audio system — no speakers setup or extra software needed. If no audio device is present, the chime is silently skipped.
+The chime loops until you click **Stop Alarm**. This uses Windows' built-in audio — no extra setup needed. If no audio device is present, it is silently skipped.
+
+### Pop-up window
+
+A small window appears centred on the app, showing the completed session name (e.g. **FOCUS complete**) and a context hint ("Time for a break!" or "Back to work!"). Click **Dismiss** to close it.
+
+### Enabling / disabling
+
+Use the **Sound** and **Pop-up** checkboxes in the Settings panel. Both are on by default. You can mix and match — e.g. pop-up only when working in silence, or sound only when you need an audible alert.
 
 ---
 
@@ -229,7 +263,8 @@ All other controls are mouse-driven.
 | File | Description |
 |---|---|
 | `pomodoro.py` | The application — run this with Python |
-| `pomodoro_YYYY-MM-DD.log` | Daily session log, auto-created in the same folder |
+| `pomodoro_YYYY-MM-DD.log` | Daily log: session entries + task list, auto-created in the same folder |
+| `requirements.txt` | Dependency list (stdlib only — nothing to install) |
 
 ---
 
