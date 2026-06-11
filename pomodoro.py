@@ -123,6 +123,8 @@ class PomodoroApp:
         self.tasks      = []
         self._thread    = None
         self._beeping   = False   # True while the end-of-session alarm is looping
+        self.notify_sound = tk.BooleanVar(value=True)
+        self.notify_popup = tk.BooleanVar(value=True)
 
         self._build()
         self._select_mode('work')
@@ -202,9 +204,20 @@ class PomodoroApp:
                             font=('Segoe UI', 12, 'bold'))
             sp.grid(row=2, column=col, padx=(0, 16), pady=(4, 0), sticky='w')
 
+        # Notification checkboxes
+        notif = tk.Frame(card, bg=C['card2'])
+        notif.grid(row=3, column=0, columnspan=3, sticky='w', pady=(12, 0))
+        tk.Label(notif, text='NOTIFY', bg=C['card2'], fg=C['sub'],
+                 font=('Segoe UI', 8, 'bold')).pack(side='left', padx=(0, 10))
+        for var, label in ((self.notify_sound, 'Sound'), (self.notify_popup, 'Pop-up')):
+            tk.Checkbutton(notif, text=label, variable=var,
+                           bg=C['card2'], fg=C['text'], selectcolor=C['bg'],
+                           activebackground=C['card2'], activeforeground=C['text'],
+                           font=('Segoe UI', 9)).pack(side='left', padx=(0, 6))
+
         PillBtn(card, 'Apply', C['work'], command=self._apply_settings,
                 font=('Segoe UI', 9, 'bold'), w=108, h=34, r=17
-                ).grid(row=3, column=0, columnspan=3, pady=(14, 0))
+                ).grid(row=4, column=0, columnspan=3, pady=(14, 0))
 
     # ── Ring drawing ─────────────────────────────────────────────────────────
 
@@ -315,18 +328,21 @@ class PomodoroApp:
             self.root.after(0, self._done)
 
     def _done(self):
-        self.running  = False
-        self._beeping = True
-        threading.Thread(target=self._beep, daemon=True).start()
-        self._log_session(self.mode, self.total_time // 60)
-        if self.mode == 'work':
+        self.running       = False
+        completed_mode     = self.mode
+        self._log_session(completed_mode, self.total_time // 60)
+        if completed_mode == 'work':
             self.sessions += 1
             next_mode = 'long_break' if self.sessions % CYCLE == 0 else 'short_break'
         else:
             next_mode = 'work'
         self._select_mode(next_mode, auto=True)
-        # Override the "Start" label that _select_mode just set
-        self._start_btn.set_text('Stop Alarm')
+        if self.notify_sound.get():
+            self._beeping = True
+            threading.Thread(target=self._beep, daemon=True).start()
+            self._start_btn.set_text('Stop Alarm')
+        if self.notify_popup.get():
+            self._show_popup(completed_mode)
 
     def _beep(self):
         # Loops the three-tone chime until _beeping is cleared by user action.
@@ -346,6 +362,30 @@ class PomodoroApp:
                 if not self._beeping:
                     return
                 time.sleep(0.1)
+
+    def _show_popup(self, mode):
+        color    = MODE_COLOR[mode]
+        label    = MODE_LABEL[mode]
+        subtitle = 'Time for a break!' if mode == 'work' else 'Back to work!'
+
+        pop = tk.Toplevel(self.root)
+        pop.title('Pomodoro')
+        pop.configure(bg=C['bg'])
+        pop.resizable(False, False)
+        pop.attributes('-topmost', True)
+
+        self.root.update_idletasks()
+        rx = self.root.winfo_x() + self.root.winfo_width() // 2
+        ry = self.root.winfo_y() + self.root.winfo_height() // 2
+        w, h = 280, 170
+        pop.geometry(f'{w}x{h}+{rx - w//2}+{ry - h//2}')
+
+        tk.Label(pop, text=f'{label} complete', bg=C['bg'], fg=color,
+                 font=('Segoe UI', 15, 'bold')).pack(pady=(28, 6))
+        tk.Label(pop, text=subtitle, bg=C['bg'], fg=C['sub'],
+                 font=('Segoe UI', 10)).pack()
+        PillBtn(pop, 'Dismiss', color, command=pop.destroy,
+                font=('Segoe UI', 10, 'bold'), w=110, h=36, r=18).pack(pady=(18, 0))
 
     def _reset(self):
         self._beeping  = False
